@@ -9,6 +9,7 @@
 #include "Stream.h"
 
 #include <string.h>
+#include <algorithm>
 
 using namespace std;
 
