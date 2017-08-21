@@ -21,6 +21,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <signal.h>
+#include <unistd.h>
 #endif
 
 using namespace std;
