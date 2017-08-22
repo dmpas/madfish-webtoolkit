@@ -17,25 +17,39 @@ using namespace CoreToolkit;
 namespace WebToolkit
 {
 
+UrlDispatcherElement::UrlDispatcherElement(const std::string &url, HttpMethod method)
+		: url(url), method(method)
+{}
+
+bool UrlDispatcherElement::operator < (const UrlDispatcherElement &b) const
+{
+	if (url < b.url)
+		return true;
+	if (url > b.url)
+		return false;
+	return method < b.method;
+}
+
 Dispatcher::Dispatcher()
 {
 }
 
 Dispatcher::~Dispatcher()
 {
-	for(map<string,Mapping>::iterator iter=dispatchMap.begin();iter!=dispatchMap.end();iter++)
+	for(auto iter : dispatchMap)
 	{
-		if(iter->second.handlerAutoDelete)
-			delete iter->second.handler;
-		if(iter->second.errorHandlerAutoDelete)
-			delete iter->second.errorHandler;
-		if(iter->second.fileHandlerAutoDelete)
-			delete iter->second.fileHandler;
+		if(iter.second.handlerAutoDelete)
+			delete iter.second.handler;
+		if(iter.second.errorHandlerAutoDelete)
+			delete iter.second.errorHandler;
+		if(iter.second.fileHandlerAutoDelete)
+			delete iter.second.fileHandler;
 	}
 }
 
-void Dispatcher::AddMapping(const std::string& st,HttpMethod allowedMethod,HttpHandler* handler,bool handlerAutoDelete,HttpHandler* errorHandler,bool errorHandlerAutoDelete,FileUploadHandler* fileHandler,bool fileHandlerAutoDelete)
+void Dispatcher::AddMapping(const std::string& url,HttpMethod allowedMethod,HttpHandler* handler,bool handlerAutoDelete,HttpHandler* errorHandler,bool errorHandlerAutoDelete,FileUploadHandler* fileHandler,bool fileHandlerAutoDelete)
 {
+	UrlDispatcherElement st(url, allowedMethod);
 	dispatchMap[st].allowedMethod=allowedMethod;
 	dispatchMap[st].handler=handler;
 	dispatchMap[st].handlerAutoDelete=handlerAutoDelete;
@@ -50,7 +64,7 @@ void Dispatcher::SetDefaultHandler(std::string defaultHandler)
 	this->defaultHandler=defaultHandler;
 }
 
-void Dispatcher::Invoke(const std::string& what,HttpServerContext* context)
+void Dispatcher::Invoke(const UrlDispatcherElement& what,HttpServerContext* context)
 {
 	if(dispatchMap.find(what)==dispatchMap.end())
 		throw logic_error("Incorrect default handler");
@@ -68,36 +82,46 @@ void Dispatcher::Invoke(const std::string& what,HttpServerContext* context)
 
 void HostDispatcher::Handle(HttpServerContext* context)
 {
-	for(map<string,Mapping>::iterator iter=dispatchMap.begin();iter!=dispatchMap.end();iter++)
+	for(auto iter : dispatchMap)
 	{
-		if((context->requestHeader.host.length()>=iter->first.length())&&(context->requestHeader.host.compare(context->requestHeader.host.length()-iter->first.length(),iter->first.length(),iter->first)==0))
+		if (iter.first.method != context->requestHeader.method) {
+			continue;
+		}
+		auto url = iter.first.url;
+		if((context->requestHeader.host.length()>=url.length())
+				&&(context->requestHeader.host.compare(context->requestHeader.host.length() - url.length(),
+						                               url.length(), url) == 0))
 		{
-			context->requestHeader.host.erase(context->requestHeader.host.length()-iter->first.length());
+			context->requestHeader.host.erase(context->requestHeader.host.length() - url.length());
 			if(context->requestHeader.host[context->requestHeader.host.length()-1]=='.')
 				context->requestHeader.host.resize(context->requestHeader.host.length()-1);
-			Invoke(iter->first,context);
+			Invoke(iter.first,context);
 			return;
 		}
 	}
 	if(!defaultHandler.empty())
-		Invoke(defaultHandler,context);
+		Invoke(UrlDispatcherElement(defaultHandler, HttpGet), context);
 	else
 		throw HttpException(HttpNotFound,"Not found.");
 }
 
 void URIDispatcher::Handle(HttpServerContext* context)
 {
-	for(map<string,Mapping>::iterator iter=dispatchMap.begin();iter!=dispatchMap.end();iter++)
+	for(auto iter : dispatchMap)
 	{
-		if((context->requestHeader.resource.length()>=iter->first.length())&&(context->requestHeader.resource.compare(0,iter->first.length(),iter->first)==0))
+		if (iter.first.method != context->requestHeader.method) {
+			continue;
+		}
+		auto url = iter.first.url;
+		if((context->requestHeader.resource.length()>=url.length())&&(context->requestHeader.resource.compare(0,url.length(),url)==0))
 		{
-			context->requestHeader.resource.erase(0,iter->first.length());
-			Invoke(iter->first,context);
+			context->requestHeader.resource.erase(0,url.length());
+			Invoke(iter.first,context);
 			return;
 		}
 	}
 	if(!defaultHandler.empty())
-		Invoke(defaultHandler,context);
+		Invoke(UrlDispatcherElement(defaultHandler, HttpGet), context);
 	else
 		throw HttpException(HttpNotFound,"Not found.");
 }

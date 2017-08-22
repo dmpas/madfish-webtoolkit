@@ -29,17 +29,25 @@ struct Mapping
 	bool fileHandlerAutoDelete;
 };
 
+class UrlDispatcherElement {
+public:
+	UrlDispatcherElement(const std::string &url, HttpMethod method);
+	bool operator < (const UrlDispatcherElement &b) const;
+	std::string           url;
+	HttpMethod            method;
+};
+
 class Dispatcher:public HttpHandler
 {
 protected:
-	std::map<std::string,Mapping> dispatchMap;
+	std::map<UrlDispatcherElement,Mapping> dispatchMap;
 	std::string defaultHandler;
 public:
 	Dispatcher();
 	~Dispatcher();
 	void AddMapping(const std::string& st,HttpMethod allowedMethod,HttpHandler* handler,bool handlerAutoDelete=false,HttpHandler* errorHandler=NULL,bool errorHandlerAutoDelete=false,FileUploadHandler* fileHandler=NULL,bool fileHandlerAutoDelete=false);
 	void SetDefaultHandler(std::string defaultHandler);
-	void Invoke(const std::string& what,HttpServerContext* context);
+	void Invoke(const UrlDispatcherElement& what,HttpServerContext* context);
 	virtual void Handle(HttpServerContext* context)=0;
 };
 
