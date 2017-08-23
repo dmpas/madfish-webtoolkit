@@ -30,6 +30,11 @@ bool UrlDispatcherElement::operator < (const UrlDispatcherElement &b) const
 	return method < b.method;
 }
 
+bool UrlDispatcherElement::operator == (const UrlDispatcherElement &b) const
+{
+	return url == b.url && method == b.method;
+}
+
 Dispatcher::Dispatcher()
 {
 }

@@ -33,6 +33,7 @@ class UrlDispatcherElement {
 public:
 	UrlDispatcherElement(const std::string &url, HttpMethod method);
 	bool operator < (const UrlDispatcherElement &b) const;
+	bool operator == (const UrlDispatcherElement &b) const;
 	std::string           url;
 	HttpMethod            method;
 };
